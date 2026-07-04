@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Robot Mesero</title>
+<style>
+  :root{
+    --azul:#4942FF; --azul-soft:#6d67ff; --mint:#AAFCE6; --negro:#05060a;
+    --sup:#0c0d16; --sup2:#141524; --sup3:#1b1c30; --borde:#242541;
+    --borde-soft:#33345a; --texto:#eef0ff; --tenue:#7a7b9c; --rojo:#ff6b6b;
+    --sombra:0 10px 30px -12px rgba(0,0,0,.7);
+  }
+  *{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    background:
+      radial-gradient(1100px 600px at 15% -10%,rgba(73,66,255,.10),transparent 60%),
+      radial-gradient(900px 500px at 110% 10%,rgba(170,252,230,.06),transparent 55%),
+      var(--negro);
+    color:var(--texto);
+    font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+    height:100dvh;overflow:hidden;display:flex;flex-direction:column;
+  }
+  svg{display:block}
+  .ic{width:1em;height:1em;stroke:currentColor;fill:none;stroke-width:1.9;
+      stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+
+  header{
+    flex:0 0 auto;display:flex;align-items:center;gap:14px;
+    padding:12px 20px;border-bottom:1px solid var(--borde);
+    background:linear-gradient(180deg,rgba(20,21,36,.6),transparent);
+  }
+  .marca{display:flex;align-items:center;gap:10px;font-weight:600;
+         letter-spacing:2.5px;text-transform:uppercase;font-size:15px}
+  .marca .logo{
+    width:34px;height:34px;border-radius:11px;display:grid;place-items:center;
+    color:#fff;font-size:19px;
+    background:linear-gradient(140deg,var(--azul),#2a24c7);
+    box-shadow:0 6px 16px -6px var(--azul);
+  }
+  .marca b{color:var(--mint);font-weight:600}
+  .pill{
+    display:flex;align-items:center;gap:8px;font-size:12px;color:var(--tenue);
+    border:1px solid var(--borde);border-radius:999px;padding:6px 12px;
+    background:rgba(20,21,36,.5);transition:.3s;white-space:nowrap;
+  }
+  .pill .led{width:8px;height:8px;border-radius:50%;background:var(--tenue);transition:.3s}
+  .pill svg{font-size:14px}
+  #con.on{color:var(--mint);border-color:rgba(170,252,230,.35)}
+  #con.on .led{background:var(--mint);box-shadow:0 0 10px var(--mint)}
+  #armadoBadge{margin-left:auto}
+  #armadoBadge.on{color:var(--negro);background:var(--mint);border-color:var(--mint);font-weight:600}
+
+  main{
+    flex:1;min-height:0;display:grid;gap:16px;padding:16px;
+    grid-template-columns:1.15fr .85fr;
+    grid-template-rows:1fr auto;
+    grid-template-areas:"cam control" "sensors control";
+  }
+  .visorWrap{grid-area:cam;min-height:0;min-width:0;display:flex;flex-direction:column;gap:10px}
+  .sensors  {grid-area:sensors;min-width:0}
+  .control  {grid-area:control;min-height:0;min-width:0}
+
+  .panel{
+    background:linear-gradient(180deg,var(--sup),#0a0b13);
+    border:1px solid var(--borde);border-radius:18px;box-shadow:var(--sombra);
+  }
+  .panelHead{display:flex;align-items:center;gap:9px;padding:12px 14px 0;
+             font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:var(--tenue)}
+  .panelHead svg{font-size:15px;color:var(--azul-soft)}
+
+  .visor{
+    flex:1;min-height:0;position:relative;border-radius:18px;overflow:hidden;
+    background:radial-gradient(circle at 50% 40%,#12131f,#080810);
+    border:1px solid var(--borde);box-shadow:var(--sombra);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .visor img{width:100%;height:100%;object-fit:cover;display:block}
+  .visor .vacio{
+    position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:10px;color:var(--tenue);font-size:13px;text-align:center;padding:24px;
+  }
+  .visor .vacio svg{font-size:34px;color:var(--borde-soft)}
+  .camTag{
+    position:absolute;top:10px;left:12px;display:flex;align-items:center;gap:6px;
+    font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--mint);
+    background:rgba(5,6,10,.6);border:1px solid var(--borde);border-radius:999px;padding:4px 10px;
+    backdrop-filter:blur(4px);
+  }
+  .camTag .dot{width:6px;height:6px;border-radius:50%;background:var(--rojo);
+               box-shadow:0 0 8px var(--rojo);animation:blink 1.4s infinite}
+  @keyframes blink{50%{opacity:.35}}
+  .filaCam{flex:0 0 auto;display:flex;gap:9px}
+  .filaCam .field{
+    flex:1;display:flex;align-items:center;gap:9px;background:var(--sup2);
+    border:1px solid var(--borde);border-radius:12px;padding:0 12px;transition:.2s;
+  }
+  .filaCam .field:focus-within{border-color:var(--azul);box-shadow:0 0 0 3px rgba(73,66,255,.15)}
+  .filaCam .field svg{font-size:16px;color:var(--tenue)}
+  .filaCam input{
+    flex:1;background:transparent;color:var(--texto);border:0;
+    padding:11px 0;font-size:13px;outline:none;
+  }
+  .filaCam button{
+    display:flex;align-items:center;gap:7px;background:var(--azul);color:#fff;border:0;
+    border-radius:12px;padding:0 18px;font-weight:600;font-size:13px;cursor:pointer;
+    transition:.2s;box-shadow:0 6px 16px -8px var(--azul);
+  }
+  .filaCam button:hover{background:var(--azul-soft)}
+  .filaCam button svg{font-size:15px}
+
+  .sensors{display:flex;flex-direction:column;gap:12px;padding:0 14px 14px;overflow-y:auto;max-height:38vh}
+  .grupo{display:flex;flex-direction:column;gap:9px}
+  .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+  .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+
+  .card{background:var(--sup2);border:1px solid var(--borde);border-radius:13px;transition:.25s}
+
+  .plato{padding:11px;display:flex;align-items:center;gap:10px}
+  .plato .icoW{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;
+               background:var(--sup3);color:var(--tenue);font-size:16px;transition:.25s;flex:0 0 auto}
+  .plato.si{border-color:rgba(170,252,230,.4)}
+  .plato.si .icoW{background:rgba(170,252,230,.12);color:var(--mint)}
+  .plato .nom{font-size:10px;letter-spacing:.5px;color:var(--tenue)}
+  .plato .est{font-size:12.5px;font-weight:600;color:var(--tenue)}
+  .plato.si .est{color:var(--mint)}
+
+  .temp{padding:11px 8px;text-align:center;position:relative}
+  .temp .nom{display:flex;align-items:center;justify-content:center;gap:4px;font-size:10px;color:var(--tenue)}
+  .temp .nom svg{font-size:12px}
+  .temp .val{font-size:21px;font-weight:700;color:var(--mint);margin:3px 0 1px;line-height:1}
+  .temp.caliente{border-color:rgba(73,66,255,.5)}
+  .temp.caliente .val{color:var(--azul-soft)}
+  .temp .etq{font-size:8.5px;letter-spacing:.8px;color:var(--tenue)}
+  .temp.caliente .etq{color:var(--azul-soft)}
+
+  .obst{padding:10px 6px;text-align:center}
+  .obst .nom{display:flex;align-items:center;justify-content:center;gap:4px;font-size:10px;font-weight:600;color:var(--texto)}
+  .obst .nom svg{font-size:12px;color:var(--tenue)}
+  .obst .cm{font-size:15px;font-weight:700;color:var(--mint);margin:3px 0 1px}
+  .obst .etq{font-size:8.5px;letter-spacing:.8px;color:var(--tenue)}
+  .obst.bloq{background:#1c0f16;border-color:var(--rojo)}
+  .obst.bloq .cm,.obst.bloq .etq{color:var(--rojo)}
+  .obst.bloq .nom svg{color:var(--rojo)}
+
+  .control{
+    display:flex;flex-direction:column;
+    background:linear-gradient(180deg,#101120,#0a0b14);
+    border:1px solid var(--borde);border-radius:20px;box-shadow:var(--sombra);
+    padding:16px;outline:none;transition:border-color .25s,box-shadow .25s;position:relative;
+  }
+  .control.armado-on{border-color:rgba(170,252,230,.45);box-shadow:0 0 0 3px rgba(170,252,230,.08),var(--sombra)}
+  .ctrlHead{display:flex;align-items:center;gap:9px;font-size:11px;letter-spacing:1.6px;
+            text-transform:uppercase;color:var(--tenue);margin-bottom:auto}
+  .ctrlHead svg{font-size:16px;color:var(--azul-soft)}
+  .kbToggle{
+    margin-left:auto;display:flex;align-items:center;gap:7px;cursor:pointer;
+    font-size:10px;letter-spacing:.8px;text-transform:uppercase;color:var(--tenue);
+    border:1px solid var(--borde);border-radius:999px;padding:6px 11px;transition:.25s;background:transparent;
+  }
+  .kbToggle svg{font-size:15px}
+  .control.armado-on .kbToggle{color:var(--negro);background:var(--mint);border-color:var(--mint);font-weight:600}
+
+  .dpadWrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:14px 0}
+  .dpad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;
+        width:100%;max-width:280px;aspect-ratio:1}
+  .dpad .sp{visibility:hidden}
+  .dpad button{
+    border-radius:16px;border:1px solid var(--borde-soft);
+    background:linear-gradient(180deg,var(--sup3),var(--sup2));
+    color:var(--texto);cursor:pointer;touch-action:none;user-select:none;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    transition:transform .08s,background .12s,box-shadow .12s;
+  }
+  .dpad button svg{font-size:26px}
+  .dpad button .tecla{font-size:9px;opacity:.5;letter-spacing:1px}
+  .dpad button:active,.dpad button.presionado{
+    background:linear-gradient(180deg,var(--azul-soft),var(--azul));
+    border-color:var(--azul-soft);color:#fff;transform:translateY(1px) scale(.97);
+    box-shadow:0 0 22px -4px var(--azul);
+  }
+  #btnStop{
+    background:linear-gradient(180deg,#20101a,#180b12);border:1px solid rgba(255,107,107,.4);
+    color:var(--rojo);gap:3px;
+  }
+  #btnStop svg{font-size:22px}
+  #btnStop .tecla{font-size:8.5px;letter-spacing:1px}
+  #btnStop:active,#btnStop.presionado{
+    background:linear-gradient(180deg,#ff8080,var(--rojo));border-color:var(--rojo);
+    color:#fff;box-shadow:0 0 22px -4px var(--rojo);transform:scale(.96);
+  }
+
+  .speed{width:100%;max-width:300px;background:var(--sup2);border:1px solid var(--borde);
+         border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:12px}
+  .speed .gicon{font-size:18px;color:var(--azul-soft)}
+  .speed .col{flex:1;display:flex;flex-direction:column;gap:6px}
+  .speed .lab{display:flex;justify-content:space-between;font-size:10px;letter-spacing:1px;
+              text-transform:uppercase;color:var(--tenue)}
+  .speed b{color:var(--mint);font-weight:700;font-size:13px}
+  .speed input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:6px;
+    background:linear-gradient(90deg,var(--azul),var(--mint));outline:none}
+  .speed input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;
+    background:#fff;border:3px solid var(--azul);cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.5)}
+  .speed input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;
+    background:#fff;border:3px solid var(--azul);cursor:pointer}
+
+  .hint{display:flex;align-items:center;justify-content:center;gap:7px;
+        font-size:11px;color:var(--tenue);text-align:center;letter-spacing:.4px;margin-top:12px}
+  .hint svg{font-size:14px}
+  .control.armado-on .hint{color:var(--mint)}
+
+  @media (max-width:820px){
+    main{
+      grid-template-columns:1fr;grid-template-rows:auto auto auto;
+      grid-template-areas:"cam" "sensors" "control";
+      overflow-y:auto;gap:13px;padding:13px;
+    }
+    .visor{min-height:190px}
+    .sensors{max-height:none;overflow:visible}
+    .control{padding:15px}
+    .dpad{max-width:260px}
+    header{padding:11px 15px;gap:10px}
+    .marca{font-size:12.5px;letter-spacing:1.5px}
+    .marca .logo{width:30px;height:30px;font-size:17px}
+    #armadoBadge{display:none}
+    .hint{display:none}
+  }
+  @media (max-width:400px){
+    .g3,.g4{gap:7px}
+    .temp .val{font-size:18px}
+    .filaCam button span{display:none}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="marca">
+    <span class="logo">
+      <svg class="ic" viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="11" rx="3"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/><circle cx="9.5" cy="13" r="1"/><circle cx="14.5" cy="13" r="1"/></svg>
+    </span>
+    Robot <b>Mesero</b>
+  </div>
+  <div class="pill" id="con">
+    <span class="led"></span>
+    <svg class="ic" viewBox="0 0 24 24"><path d="M2 8.5a15 15 0 0 1 20 0"/><path d="M5 12a10 10 0 0 1 14 0"/><path d="M8.5 15.5a5 5 0 0 1 7 0"/><circle cx="12" cy="19" r="1"/></svg>
+    <span id="conTxt">Conectando…</span>
+  </div>
+  <div class="pill" id="armadoBadge">
+    <svg class="ic" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h.01M18 14h.01M9 14h6"/></svg>
+    <span>Teclado inactivo</span>
+  </div>
+</header>
+
+<main>
+  <div class="visorWrap">
+    <div class="visor">
+      <img id="cam" alt="">
+      <div class="camTag"><span class="dot"></span>En vivo</div>
+      <div class="vacio" id="camVacio">
+        <svg class="ic" viewBox="0 0 24 24"><path d="M15 8h4a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h1l1.5-2h5"/><circle cx="12" cy="14" r="3.5"/></svg>
+        Escribe la IP de la ESP32-CAM y pulsa Ver
+      </div>
+    </div>
+    <div class="filaCam">
+      <div class="field">
+        <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>
+        <input id="ipCam" placeholder="IP de la ESP32-CAM, ej. 192.168.4.2">
+      </div>
+      <button onclick="conectarCam()">
+        <svg class="ic" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+        <span>Ver</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="panel sensors">
+    <div class="grupo">
+      <div class="panelHead" style="padding:0">
+        <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/></svg>
+        Presencia de platos
+      </div>
+      <div class="g3" id="platos"></div>
+    </div>
+    <div class="grupo">
+      <div class="panelHead" style="padding:0">
+        <svg class="ic" viewBox="0 0 24 24"><path d="M14 14.76V5a2 2 0 0 0-4 0v9.76a4 4 0 1 0 4 0Z"/></svg>
+        Temperatura
+      </div>
+      <div class="g3" id="temps"></div>
+    </div>
+    <div class="grupo">
+      <div class="panelHead" style="padding:0">
+        <svg class="ic" viewBox="0 0 24 24"><path d="M12 20a8 8 0 0 0 8-8"/><path d="M12 16a4 4 0 0 0 4-4"/><path d="M4 12a8 8 0 0 1 8-8"/><circle cx="12" cy="12" r="1.5"/></svg>
+        Sensores de obstáculo
+      </div>
+      <div class="g4" id="obst"></div>
+    </div>
+  </div>
+
+  <div class="control" id="mando" tabindex="0">
+    <div class="ctrlHead">
+      <svg class="ic" viewBox="0 0 24 24"><path d="M6 8h12l2 8H4l2-8Z"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/><circle cx="9" cy="12.5" r="1"/><circle cx="15" cy="12.5" r="1"/></svg>
+      Estación de control
+      <button class="kbToggle" id="kbToggle" type="button">
+        <svg class="ic" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M9 14h6"/></svg>
+        <span id="kbToggleTxt">Teclado</span>
+      </button>
+    </div>
+
+    <div class="dpadWrap">
+      <div class="dpad">
+        <span class="sp"></span>
+        <button data-vx="1" data-w="0" data-key="w">
+          <svg class="ic" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg><span class="tecla">W</span>
+        </button>
+        <span class="sp"></span>
+
+        <button data-vx="0" data-w="-1" data-key="a">
+          <svg class="ic" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg><span class="tecla">A</span>
+        </button>
+        <button id="btnStop" data-key=" ">
+          <svg class="ic" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="3"/></svg><span class="tecla">STOP</span>
+        </button>
+        <button data-vx="0" data-w="1" data-key="d">
+          <svg class="ic" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg><span class="tecla">D</span>
+        </button>
+
+        <span class="sp"></span>
+        <button data-vx="-1" data-w="0" data-key="s">
+          <svg class="ic" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg><span class="tecla">S</span>
+        </button>
+        <span class="sp"></span>
+      </div>
+
+      <div class="speed">
+        <svg class="ic gicon" viewBox="0 0 24 24"><path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/><path d="M13.4 10.6 18 6"/><path d="M4 18a8 8 0 1 1 16 0"/></svg>
+        <div class="col">
+          <div class="lab"><span>Velocidad</span><b id="spdVal">180</b></div>
+          <input type="range" id="spd" min="80" max="255" value="180">
+        </div>
+      </div>
+    </div>
+
+    <div class="hint" id="avisoTeclado">
+      <svg class="ic" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+      Haz clic aquí para controlar con el teclado
+    </div>
+  </div>
+</main>
+
+<script>
+let ws, timerEnvio=null, vx=0, w=0, armado=false;
+
+function conectar(){
+  ws=new WebSocket("ws://"+location.host+"/ws");
+  ws.onopen =()=>{con.classList.add("on");conTxt.textContent="Conectado";};
+  ws.onclose=()=>{con.classList.remove("on");conTxt.textContent="Reconectando…";setTimeout(conectar,1500);};
+  ws.onmessage=ev=>actualizar(JSON.parse(ev.data));
+}
+const con=document.getElementById("con"), conTxt=document.getElementById("conTxt");
+conectar();
+
+function enviar(){
+  if(ws&&ws.readyState===1)
+    ws.send(JSON.stringify({cmd:"move",vx:vx,w:w,spd:+spd.value}));
+}
+function stop(){
+  vx=0;w=0;clearInterval(timerEnvio);timerEnvio=null;
+  if(ws&&ws.readyState===1)ws.send(JSON.stringify({cmd:"stop"}));
+}
+function iniciarMov(nvx,nw){
+  vx=nvx;w=nw;enviar();
+  clearInterval(timerEnvio);timerEnvio=setInterval(enviar,200);
+}
+
+document.querySelectorAll(".dpad button[data-vx]").forEach(b=>{
+  b.addEventListener("pointerdown",e=>{e.preventDefault();iniciarMov(+b.dataset.vx,+b.dataset.w);});
+  b.addEventListener("pointerup",stop);
+  b.addEventListener("pointerleave",()=>{if(timerEnvio)stop();});
+});
+document.getElementById("btnStop").addEventListener("pointerdown",stop);
+
+const mando=document.getElementById("mando");
+const badge=document.getElementById("armadoBadge");
+const badgeTxt=badge.querySelector("span");
+const aviso=document.getElementById("avisoTeclado");
+const avisoTxt=aviso.childNodes[aviso.childNodes.length-1];
+const kbToggleTxt=document.getElementById("kbToggleTxt");
+function setArmado(v){
+  armado=v;
+  mando.classList.toggle("armado-on",v);
+  badge.classList.toggle("on",v);
+  badgeTxt.textContent=v?"Teclado activo":"Teclado inactivo";
+  kbToggleTxt.textContent=v?"Activo":"Teclado";
+  avisoTxt.textContent=v?" WASD para mover · Espacio para detener":" Haz clic aquí para controlar con el teclado";
+  if(!v)stop();
+}
+document.addEventListener("pointerdown",e=>{
+  setArmado(mando.contains(e.target) && e.target.id!=="ipCam");
+});
+document.getElementById("kbToggle").addEventListener("pointerdown",e=>{
+  e.stopPropagation();e.preventDefault();setArmado(!armado);mando.focus();
+});
+
+const mapa={w:{vx:1,w:0},s:{vx:-1,w:0},a:{vx:0,w:-1},d:{vx:0,w:1}};
+const activa={};
+function pinta(key,on){
+  const b=document.querySelector('.dpad button[data-key="'+key+'"]');
+  if(b)b.classList.toggle("presionado",on);
+}
+document.addEventListener("keydown",e=>{
+  if(!armado)return;
+  const k=e.key.toLowerCase();
+  if(k===" "||e.code==="Space"){e.preventDefault();stop();
+    for(const t in activa)delete activa[t];
+    document.querySelectorAll(".dpad .presionado").forEach(x=>x.classList.remove("presionado"));
+    const s=document.getElementById("btnStop");s.classList.add("presionado");
+    setTimeout(()=>s.classList.remove("presionado"),150);return;}
+  if(mapa[k]&&!activa[k]){e.preventDefault();activa[k]=1;pinta(k,true);aplicarTeclas();}
+});
+document.addEventListener("keyup",e=>{
+  if(!armado)return;
+  const k=e.key.toLowerCase();
+  if(mapa[k]){delete activa[k];pinta(k,false);aplicarTeclas();}
+});
+function aplicarTeclas(){
+  let nvx=0,nw=0;
+  for(const k in activa){nvx+=mapa[k].vx;nw+=mapa[k].w;}
+  nvx=Math.max(-1,Math.min(1,nvx));nw=Math.max(-1,Math.min(1,nw));
+  if(nvx===0&&nw===0){stop();return;}
+  iniciarMov(nvx,nw);
+}
+
+const spd=document.getElementById("spd");
+const spdVal=document.getElementById("spdVal");
+spd.addEventListener("input",()=>spdVal.textContent=spd.value);
+
+const IC={
+  plato:'<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg>',
+  termo:'<svg class="ic" viewBox="0 0 24 24"><path d="M14 14.76V5a2 2 0 0 0-4 0v9.76a4 4 0 1 0 4 0Z"/></svg>',
+  frente:'<svg class="ic" viewBox="0 0 24 24"><path d="M12 4v10"/><path d="M7 9l5-5 5 5"/></svg>',
+  izq:'<svg class="ic" viewBox="0 0 24 24"><path d="M20 12H8"/><path d="M13 7l-5 5 5 5"/></svg>',
+  der:'<svg class="ic" viewBox="0 0 24 24"><path d="M4 12h12"/><path d="M11 7l5 5-5 5"/></svg>',
+  tras:'<svg class="ic" viewBox="0 0 24 24"><path d="M12 20V10"/><path d="M7 15l5 5 5-5"/></svg>'
+};
+
+function estadoInicial(){
+  return {
+    obst:{frontal:false,izq:false,der:false,tras:false},
+    dist:{frontal:-1,izq:-1,der:-1,tras:-1},
+    freno:false,
+    bandejas:[
+      {plato:false,temp:-127,caliente:false},
+      {plato:false,temp:-127,caliente:false},
+      {plato:false,temp:-127,caliente:false},
+    ],
+  };
+}
+
+function actualizar(d){
+  document.getElementById("platos").innerHTML=d.bandejas.map((b,i)=>`
+    <div class="card plato ${b.plato?"si":""}">
+      <span class="icoW">${IC.plato}</span>
+      <div><div class="nom">Bandeja ${i+1}</div>
+      <div class="est">${b.plato?"Con plato":"Vacía"}</div></div>
+    </div>`).join("");
+
+  document.getElementById("temps").innerHTML=d.bandejas.map((b,i)=>{
+    const sinDato=b.temp<=-100;
+    const etq=sinDato?"SIN DATO":(b.caliente?"CALIENTE":"TEMPLADO");
+    return `<div class="card temp ${b.caliente?"caliente":""}">
+      <div class="nom">${IC.termo} B${i+1}</div>
+      <div class="val">${sinDato?"--":b.temp.toFixed(1)+"°"}</div>
+      <div class="etq">${etq}</div>
+    </div>`;}).join("");
+
+  const nav=[["Frente","frontal","frente"],["Izq.","izq","izq"],["Der.","der","der"],["Atrás","tras","tras"]];
+  document.getElementById("obst").innerHTML=nav.map(([nom,key,ico])=>{
+    const cm=d.dist[key], bloq=d.obst[key];
+    const txt=cm>0?cm.toFixed(0)+" cm":"--";
+    return `<div class="card obst ${bloq?"bloq":""}">
+      <div class="nom">${IC[ico]} ${nom}</div>
+      <div class="cm">${txt}</div>
+      <div class="etq">${bloq?"BLOQUEADO":"LIBRE"}</div>
+    </div>`;}).join("");
+}
+
+function conectarCam(){
+  const ip=document.getElementById("ipCam").value.trim();
+  if(ip){document.getElementById("cam").src="http://"+ip+":81/stream";
+    document.getElementById("camVacio").style.display="none";}
+}
+
+actualizar(estadoInicial());
+</script>
+</body>
+</html>
